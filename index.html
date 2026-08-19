@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BACKLOG.SYS</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#9DA37E">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Backlog">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  /* Core Retro Pixel UI palette \u2014 shared across every tab */
+  --bg:#9DA37E;
+  --panel:#ACAF8E;
+  --panel-2:#D8D2B5;
+  --ink:#2B2B23;
+  --cream:#F2EEDD;
+  --text:#2B2B23;
+  --text-dim:#5C5D48;
+  --good:#4A6B3E;
+  --bad:#7A3B3B;
+  --font-display: 'Pixelify Sans', monospace;
+  --font-body: 'Pixelify Sans', monospace;
+  --card-radius: 4px;
+
+  /* Per-tab accent identity (small pops of color only) \u2014 default: Games */
+  --accent:#4F7091;
+  --accent-dim:#3A5570;
+  --accent-glow: rgba(79,112,145,0.3);
+
+  /* Fixed reward-system colors, constant regardless of tab */
+  --green:#4F8F5A;
+  --green-dim:#3A6B43;
+  --green-glow: rgba(79,143,90,0.35);
+  --cyan:#3E7A8A;
+  --cyan-dim:#2E5C68;
+  --cyan-glow: rgba(62,122,138,0.35);
+  --amber:#B8862E;
+  --amber-dim:#8A6320;
+  --amber-glow: rgba(184,134,46,0.35);
+  --red:#8A3B3B;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  font-size:1.1rem;
+  min-height:100vh;
+  position:relative;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.015) 0 2px, transparent 2px 4px);
+}
+
+@keyframes blink{
+  0%,49%{opacity:1;}
+  50%,100%{opacity:0;}
+}
+@keyframes toastIn{
+  0%{transform:translate(-50%,-20px);opacity:0;}
+  100%{transform:translate(-50%,0);opacity:1;}
+}
+@keyframes popIn{
+  0%{transform:scale(0.9);opacity:0;}
+  100%{transform:scale(1);opacity:1;}
+}
+
+.wrap{max-width:1000px;margin:0 auto;padding:30px 20px 80px;}
+
+/* ---- Header ---- */
+.drawer-label{
+  border:3px solid var(--ink);
+  border-radius:var(--card-radius);
+  padding:16px 20px;
+  background:var(--panel);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  margin-bottom:14px;
+  flex-wrap:wrap;
+  gap:10px;
+  box-shadow:5px 5px 0 var(--ink);
+}
+.drawer-label h1{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:1.9rem;
+  margin:0;
+  color:var(--ink);
+  letter-spacing:0.02em;
+  line-height:1.3;
+}
+.drawer-label .sub{
+  font-family:var(--font-body);
+  font-size:0.85rem;
+  color:var(--text-dim);
+  letter-spacing:0.02em;
+  margin-top:6px;
+}
+.drawer-label .sub .cursor{
+  display:inline-block;
+  width:8px;height:14px;
+  background:var(--ink);
+  margin-left:2px;
+  animation:blink 1s step-end infinite;
+  vertical-align:middle;
+}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;}
+.drawer-counts{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.75rem;
+  color:var(--text-dim);
+  text-align:right;
+  line-height:1.7;
+}
+.drawer-counts b{color:var(--ink);}
+.header-btns{display:flex;gap:8px;}
+.ach-btn{
+  font-family:var(--font-body);
+  font-size:0.8rem;
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+  padding:7px 14px;
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  background:var(--amber);
+  color:var(--cream);
+  cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.ach-btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink);}
+.drawer-rail{display:none;}
+
+/* ---- Tabs: pill segmented control ---- */
+.tabs{
+  display:inline-flex;
+  gap:2px;
+  background:var(--panel-2);
+  border:3px solid var(--ink);
+  border-radius:999px;
+  padding:4px;
+  margin-bottom:14px;
+  box-shadow:4px 4px 0 var(--ink);
+}
+.tab{
+  font-family:var(--font-body);
+  font-size:0.95rem;
+  letter-spacing:0.01em;
+  text-transform:uppercase;
+  padding:8px 20px;
+  border:none;
+  border-radius:999px;
+  background:transparent;
+  color:var(--text);
+  cursor:pointer;
+  transition:background .15s ease, color .15s ease;
+}
+.tab.active{
+  background:var(--ink);
+  color:var(--cream);
+}
+.tab:not(.active):hover{background:rgba(43,43,35,0.1);}
+.tab .count{opacity:0.7;margin-left:4px;font-size:0.85em;}
+
+.limit-banner{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.72rem;
+  letter-spacing:0.01em;
+  padding:10px 18px;
+  background:var(--panel-2);
+  color:var(--text-dim);
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  line-height:1.6;
+  margin-bottom:14px;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.limit-banner b{color:var(--ink);}
+.limit-banner.full{color:var(--bad);}
+.limit-banner.full b{color:var(--bad);}
+.limit-banner .cap-line.full{color:var(--bad);}
+.limit-banner .cap-line.full b{color:var(--bad);}
+
+/* ---- Toolbar ---- */
+.today-panel{
+  background:var(--panel);
+  border:3px solid var(--ink);
+  border-radius:var(--card-radius);
+  padding:18px 20px;
+  box-shadow:5px 5px 0 var(--ink);
+}
+.today-quote{
+  border-left:4px solid var(--accent);
+  background:var(--panel-2);
+  border-radius:0 calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px) 0;
+  padding:10px 14px;
+  margin-bottom:16px;
+}
+.today-quote .q-text{
+  font-family:var(--font-body);
+  font-style:italic;
+  font-size:1rem;
+  color:var(--text);
+  line-height:1.4;
+}
+.today-quote .q-author{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.68rem;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--text-dim);
+  margin-top:6px;
+  text-align:right;
+}
+.today-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.today-date{
+  font-family:var(--font-display);
+  font-size:1.1rem;
+  color:var(--ink);
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+}
+.today-count{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.75rem;
+  color:var(--text-dim);
+}
+.today-count b{color:var(--good);}
+.today-add-row{display:flex;gap:8px;margin-bottom:16px;}
+.today-add-row input{
+  flex:1;
+  font-family:var(--font-body);
+  font-size:1rem;
+  padding:9px 12px;
+  border:2px solid var(--ink);
+  border-radius:calc(var(--card-radius) - 1px);
+  background:var(--panel-2);
+  color:var(--text);
+}
+.today-add-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.today-add-row .add-btn{padding:9px 18px;}
+.today-list{display:flex;flex-direction:column;gap:8px;}
+.today-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--panel-2);
+  border:2px solid var(--ink);
+  border-radius:calc(var(--card-radius) - 1px);
+  padding:9px 12px;
+}
+.today-item.done{opacity:0.6;}
+.today-check{
+  width:22px;height:22px;
+  flex:none;
+  border:2px solid var(--ink);
+  border-radius:4px;
+  background:var(--panel);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.9rem;
+  color:var(--cream);
+}
+.today-item.done .today-check{background:var(--good);border-color:var(--good);}
+.today-text{
+  flex:1;
+  font-family:var(--font-body);
+  font-size:1rem;
+  color:var(--text);
+  word-break:break-word;
+}
+.today-item.done .today-text{text-decoration:line-through;color:var(--text-dim);}
+.today-del{
+  flex:none;
+  background:none;
+  border:none;
+  color:var(--text-dim);
+  cursor:pointer;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.75rem;
+  padding:4px 6px;
+}
+.today-del:hover{color:var(--bad);}
+.today-empty{
+  font-family:'IBM Plex Mono',monospace;
+  color:var(--text-dim);
+  font-size:0.82rem;
+  padding:26px 10px;
+  text-align:center;
+  border:2px dashed var(--ink);
+  border-radius:var(--card-radius);
+}
+.today-empty::before{content:'[ ';}
+.today-empty::after{content:' ]';}
+
+.toolbar{
+  background:var(--panel);
+  border:3px solid var(--ink);
+  border-radius:var(--card-radius);
+  padding:18px 20px;
+  box-shadow:5px 5px 0 var(--ink);
+}
+.tb-row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px;}
+.filters{display:flex;gap:6px;flex-wrap:wrap;}
+.filter-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.66rem;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+  padding:6px 12px;
+  border:2px solid var(--ink);
+  border-radius:999px;
+  background:var(--panel-2);
+  color:var(--text-dim);
+  cursor:pointer;
+}
+.filter-btn.active{background:var(--ink);color:var(--cream);}
+.filter-btn:hover:not(.active){background:var(--cream);color:var(--ink);}
+.add-btn{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:1rem;
+  padding:9px 20px;
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  background:var(--accent);
+  color:var(--cream);
+  cursor:pointer;
+  box-shadow:3px 3px 0 var(--ink);
+}
+.add-btn:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 var(--ink);}
+.add-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;}
+.empty-state{
+  font-family:'IBM Plex Mono',monospace;
+  color:var(--text-dim);
+  font-size:0.82rem;
+  padding:36px 10px;
+  text-align:center;
+  border:2px dashed var(--ink);
+  border-radius:var(--card-radius);
+  grid-column:1/-1;
+}
+.empty-state::before{content:'[ ';}
+.empty-state::after{content:' ]';}
+
+/* ---- Item card ---- */
+.card{
+  position:relative;
+  background:var(--panel);
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  padding:0 0 12px;
+  box-shadow:4px 4px 0 var(--ink);
+}
+.card-titlebar{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:var(--ink);
+  color:var(--cream);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.6rem;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  padding:5px 10px;
+  border-radius:calc(var(--card-radius) - 2px) calc(var(--card-radius) - 2px) 0 0;
+}
+.card-titlebar .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;}
+.card-cover{
+  width:100%;height:130px;
+  overflow:hidden;
+  background:var(--panel-2);
+  border-bottom:2px solid var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.card-cover img{width:100%;height:100%;object-fit:cover;}
+.card-cover .placeholder{font-size:2.4rem;opacity:0.4;}
+.card-head{padding:12px 14px 4px;padding-right:88px;position:relative;}
+.card-title{
+  font-family:var(--font-display);
+  font-weight:500;
+  font-size:1.15rem;
+  color:var(--ink);
+  line-height:1.25;
+}
+.card-type{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.6rem;
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  color:var(--text-dim);
+}
+
+.stamp{
+  position:absolute;
+  top:12px; right:14px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.58rem;
+  font-weight:600;
+  letter-spacing:0.03em;
+  text-transform:uppercase;
+  padding:3px 7px;
+  border-radius:999px;
+  border:1.5px solid currentColor;
+  white-space:nowrap;
+  background:var(--panel-2);
+}
+.stamp.backlog{color:var(--text-dim);}
+.stamp.active{color:var(--accent);}
+.stamp.done{color:var(--good);}
+.stamp.discarded{color:var(--bad);}
+
+.divider{border:none;border-top:2px dashed var(--ink);opacity:0.25;margin:10px 14px;}
+
+.progress-row{display:flex;align-items:center;gap:8px;margin:0 14px 8px;}
+.progress-track{flex:1;height:10px;background:var(--panel-2);border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;}
+.progress-fill{height:100%;}
+.progress-fill.game,.progress-fill.skill,.progress-fill.book{background:var(--accent);}
+.progress-fill.done{background:var(--good);}
+.progress-fill.discarded{background:var(--bad);}
+.progress-pct{font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--text-dim);min-width:30px;text-align:right;}
+
+.stars{font-size:1rem;letter-spacing:1px;margin:0 14px 8px;color:var(--amber);}
+.stars .off{color:rgba(43,43,35,0.18);}
+
+.info-row{
+  display:flex;gap:14px;flex-wrap:wrap;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.68rem;
+  color:var(--text-dim);
+  margin:0 14px 8px;
+}
+.info-row span b{color:var(--ink);}
+
+.streak-row{
+  margin:0 14px 8px;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.68rem;
+  color:var(--text-dim);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.streak-row .flame{color:var(--amber);font-weight:600;}
+.streak-row .stale{color:var(--bad);}
+.checkin-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.6rem;
+  text-transform:uppercase;
+  letter-spacing:0.02em;
+  padding:4px 10px;
+  border:1.5px solid var(--ink);
+  border-radius:999px;
+  background:var(--amber);
+  color:var(--cream);
+  cursor:pointer;
+}
+.checkin-btn:hover{filter:brightness(1.08);}
+.checkin-btn:disabled{background:var(--panel-2);color:var(--text-dim);border-color:var(--text-dim);cursor:default;}
+
+.notes{
+  font-family:var(--font-body);
+  font-size:0.92rem;
+  color:var(--text);
+  opacity:0.9;
+  line-height:1.4;
+  min-height:1em;
+  white-space:pre-wrap;
+  margin:0 14px;
+}
+
+.card-actions{display:flex;gap:10px;margin:12px 14px 0;}
+.card-actions button{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.62rem;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+  background:var(--panel-2);
+  border:1.5px solid var(--ink);
+  border-radius:999px;
+  color:var(--text);
+  cursor:pointer;
+  padding:4px 12px;
+}
+.card-actions button:hover{background:var(--accent);color:var(--cream);}
+
+/* ---- Modal ---- */
+.overlay{
+  position:fixed;inset:0;background:rgba(43,43,35,0.55);
+  display:none;align-items:center;justify-content:center;z-index:60;padding:20px;
+  overflow-y:auto;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--panel);
+  border:3px solid var(--ink);
+  border-radius:var(--card-radius);
+  box-shadow:6px 6px 0 var(--ink);
+  width:100%;max-width:420px;
+  padding:22px;
+  font-family:var(--font-body);
+  color:var(--text);
+  margin:auto;
+  animation:popIn .15s ease-out;
+}
+.modal h2{
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:1.3rem;
+  color:var(--ink);
+  margin:0 0 18px;
+}
+.field{margin-bottom:14px;}
+.field label{
+  display:block;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.65rem;
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  color:var(--text-dim);
+  margin-bottom:5px;
+}
+.field input[type=text], .field input[type=number], .field textarea, .field select{
+  width:100%;
+  font-family:var(--font-body);
+  font-size:1rem;
+  padding:8px 10px;
+  border:2px solid var(--ink);
+  border-radius:calc(var(--card-radius) - 1px);
+  background:var(--panel-2);
+  color:var(--text);
+}
+.field input:focus, .field textarea:focus, .field select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+.field textarea{resize:vertical;min-height:56px;}
+.field-row{display:flex;gap:12px;}
+.field-row .field{flex:1;}
+.type-toggle{display:flex;gap:8px;}
+.type-toggle button{
+  flex:1;
+  padding:8px;
+  border:2px solid var(--ink);
+  border-radius:calc(var(--card-radius) - 1px);
+  background:var(--panel-2);
+  color:var(--text-dim);
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.66rem;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.type-toggle button.sel{background:var(--ink);color:var(--cream);}
+.rating-pick{display:flex;gap:4px;font-size:1.3rem;cursor:pointer;color:var(--amber);}
+.rating-pick span.off{color:rgba(43,43,35,0.18);}
+.range-row{display:flex;align-items:center;gap:10px;}
+.range-row input[type=range]{flex:1;accent-color:var(--accent);}
+.range-row .val{font-family:'IBM Plex Mono',monospace;font-size:0.8rem;min-width:34px;color:var(--ink);}
+.modal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+.btn-primary{
+  background:var(--ink);color:var(--cream);border:2px solid var(--ink);
+  padding:9px 20px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer;
+  text-transform:uppercase;font-size:0.75rem;letter-spacing:0.05em;
+  border-radius:999px;
+  box-shadow:3px 3px 0 rgba(43,43,35,0.3);
+}
+.btn-primary:hover{transform:translate(1px,1px);box-shadow:2px 2px 0 rgba(43,43,35,0.3);}
+.btn-primary:disabled{opacity:0.35;cursor:not-allowed;transform:none;box-shadow:3px 3px 0 rgba(43,43,35,0.3);}
+.btn-cancel{background:none;border:none;color:var(--text-dim);cursor:pointer;font-family:var(--font-body);font-size:1rem;}
+.btn-cancel:hover{color:var(--text);}
+.btn-delete{background:none;border:1.5px solid var(--bad);color:var(--bad);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;text-transform:uppercase;padding:5px 10px;border-radius:999px;}
+.warn-box{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.7rem;
+  color:var(--bad);
+  background:rgba(122,59,59,0.1);
+  border:1.5px solid var(--bad);
+  border-radius:var(--card-radius);
+  padding:9px 11px;
+  margin-bottom:14px;
+  display:none;
+  line-height:1.5;
+}
+.warn-box::before{content:'!! ';}
+.warn-box.show{display:block;}
+
+/* ---- Achievements panel ---- */
+.ach-section{margin-bottom:22px;}
+.ach-section h3{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.75rem;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--text-dim);
+  margin:0 0 10px;
+  border-bottom:2px dashed var(--ink);
+  padding-bottom:6px;
+}
+.ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.ach-badge{
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  padding:10px;
+  text-align:center;
+  background:var(--panel-2);
+}
+.ach-badge.locked{opacity:0.7;}
+.ach-badge .icon{display:flex;align-items:center;justify-content:center;margin-bottom:4px;image-rendering:pixelated;}
+.ach-badge .icon svg{image-rendering:pixelated;}
+.ach-badge.locked .icon{filter:grayscale(1);}
+.ach-rank{color:var(--amber);font-size:0.6rem;letter-spacing:1px;margin-bottom:2px;}
+.ach-badge.locked .ach-rank{color:var(--text-dim);opacity:0.6;}
+.ach-badge .label{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:0.62rem;
+  text-transform:uppercase;
+  letter-spacing:0.03em;
+  color:var(--green);
+}
+.ach-badge.locked .label{color:var(--text-dim);}
+.ach-badge .sub{font-family:'IBM Plex Mono',monospace;font-size:0.58rem;color:var(--text-dim);margin-top:3px;}
+.ach-badge.book{border-color:var(--cyan-dim);}
+.ach-badge.book .label{color:var(--cyan);}
+.ach-badge.book.locked .label{color:var(--text-dim);}
+.ach-empty{font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text-dim);padding:10px 0;}
+.ach-empty::before{content:'[ ';}
+.ach-empty::after{content:' ]';}
+
+#fxLayer{ position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden; }
+
+#toast{
+  position:fixed;
+  top:20px;left:50%;
+  z-index:100;
+  background:var(--ink);
+  border:2px solid var(--ink);
+  border-radius:var(--card-radius);
+  box-shadow:4px 4px 0 rgba(43,43,35,0.4);
+  padding:12px 20px;
+  font-family:var(--font-display);
+  font-size:0.85rem;
+  color:var(--amber);
+  text-align:center;
+  display:none;
+  animation:toastIn .25s ease-out;
+  max-width:90vw;
+}
+#toast .t1{font-size:0.62rem;color:var(--cream);margin-bottom:6px;letter-spacing:0.05em;opacity:0.8;}
+
+@media (max-width:480px){
+  .drawer-label{flex-direction:column;align-items:flex-start;gap:10px;}
+  .header-right{align-items:flex-start;}
+  .drawer-counts{text-align:left;}
+}
+</style>
+</head>
+<body data-theme="today">
+
+<div id="fxLayer" style="position:fixed;inset:0;pointer-events:none;z-index:90;overflow:hidden;"></div>
+<div id="toast"><div class="t1">ACHIEVEMENT UNLOCKED</div><div id="toastLabel"></div></div>
+
+<div class="wrap">
+  <div class="drawer-label">
+    <div>
+      <h1>BACKLOG.SYS</h1>
+      <div class="sub">C:\GAMES_BOOKS_SKILLS\STATUS.LOG<span class="cursor"></span></div>
+    </div>
+    <div class="header-right">
+      <div class="drawer-counts" id="drawerCounts"></div>
+      <div class="header-btns">
+        <button class="ach-btn" id="achBtn">&#9733; ACHIEVEMENTS</button>
+      </div>
+    </div>
+  </div>
+  <div class="drawer-rail"></div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-type="today">Today</div>
+    <div class="tab" data-type="game">Games <span class="count" id="countGame"></span></div>
+    <div class="tab" data-type="skill">Skills <span class="count" id="countSkill"></span></div>
+    <div class="tab" data-type="book">Books <span class="count" id="countBook"></span></div>
+  </div>
+  <div class="limit-banner" id="limitBanner" style="display:none;"></div>
+
+  <div class="today-panel" id="todayPanel">
+    <div class="today-quote" id="todayQuote"></div>
+    <div class="today-head">
+      <div class="today-date" id="todayDate"></div>
+      <div class="today-count" id="todayCount"></div>
+    </div>
+    <div class="today-add-row">
+      <input type="text" id="todoInput" placeholder="What's the plan for today?" maxlength="140">
+      <button class="add-btn" id="todoAddBtn">+ ADD</button>
+    </div>
+    <div class="today-list" id="todayList"></div>
+  </div>
+
+  <div class="toolbar" id="catalogToolbar" style="display:none;">
+    <div class="tb-row">
+      <div class="filters" id="filters">
+        <button class="filter-btn active" data-status="all">All</button>
+        <button class="filter-btn" data-status="backlog">Backlog</button>
+        <button class="filter-btn" data-status="active">In progress</button>
+        <button class="filter-btn" data-status="done">Done</button>
+        <button class="filter-btn" data-status="discarded">Discarded</button>
+      </div>
+      <button class="add-btn" id="addBtn">+ NEW ENTRY</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">NEW ENTRY</h2>
+    <input type="hidden" id="editId">
+    <div class="field">
+      <label>Type</label>
+      <div class="type-toggle">
+        <button type="button" data-val="game" id="typeGame">Game</button>
+        <button type="button" data-val="skill" id="typeSkill">Skill</button>
+        <button type="button" data-val="book" id="typeBook">Book</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="fTitle" placeholder="e.g. Hades II, Learn SQL, Dune">
+    </div>
+    <div class="field">
+      <label>Cover image (optional)</label>
+      <div class="field-row" id="coverLookupGame" style="display:none;">
+        <div class="field">
+          <input type="text" id="fSteamId" placeholder="Steam App ID, e.g. 1145360">
+        </div>
+        <button type="button" class="type-toggle-btn-inline" id="useSteamArt" style="align-self:flex-start;padding:9px 12px;border:1px solid var(--green-dim);background:#04150a;color:var(--green);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;text-transform:uppercase;cursor:pointer;">Use Steam art</button>
+      </div>
+      <div class="field-row" id="coverLookupBook" style="display:none;">
+        <div class="field">
+          <input type="text" id="fIsbn" placeholder="ISBN, e.g. 9780441172719">
+        </div>
+        <button type="button" id="useIsbnArt" style="align-self:flex-start;padding:9px 12px;border:1px solid var(--cyan-dim);background:#04150a;color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:0.68rem;text-transform:uppercase;cursor:pointer;">Use cover</button>
+      </div>
+      <input type="text" id="fImageUrl" placeholder="...or paste any image URL">
+      <div style="margin-top:8px;">
+        <input type="file" id="fImageFile" accept="image/*">
+      </div>
+      <div id="imagePreviewWrap" style="margin-top:8px;display:none;">
+        <img id="imagePreview" style="max-width:110px;max-height:110px;border:1px solid var(--green-dim);display:block;" onerror="handlePreviewError(this)">
+        <button type="button" class="btn-delete" id="removeImageBtn" style="margin-top:6px;">Remove image</button>
+      </div>
+    </div>
+    <div class="field" id="statusFieldWrap">
+      <label>Status</label>
+      <select id="fStatus">
+        <option value="backlog">Backlog</option>
+        <option value="active">In progress</option>
+        <option value="done">Done</option>
+        <option value="discarded">Discarded</option>
+      </select>
+    </div>
+    <div class="warn-box" id="warnBox"></div>
+    <div class="field">
+      <label>Progress</label>
+      <div class="range-row">
+        <input type="range" id="fProgress" min="0" max="100" step="5" value="0">
+        <span class="val" id="fProgressVal">0%</span>
+      </div>
+    </div>
+    <div class="field" id="steamFields" style="display:none;">
+      <label>Hours played &amp; achievements (update manually from Steam)</label>
+      <div class="field-row">
+        <div class="field">
+          <input type="number" id="fHours" min="0" step="0.1" placeholder="Hours played">
+        </div>
+        <div class="field">
+          <input type="number" id="fAch" min="0" max="100" step="1" placeholder="Achievements %">
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>Rating</label>
+      <div class="rating-pick" id="fRating"></div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Where you left off, what you thought, or why you want this..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <div>
+        <button class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button class="btn-delete" id="deleteBtn" style="display:none;margin-left:14px;">Remove</button>
+      </div>
+      <button class="btn-primary" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="achOverlay">
+  <div class="modal" style="max-width:560px;">
+    <h2>ACHIEVEMENTS</h2>
+    <div class="ach-section">
+      <h3>Games Cleared</h3>
+      <div class="ach-grid" id="achGames"></div>
+    </div>
+    <div class="ach-section">
+      <h3>Books Finished</h3>
+      <div class="ach-grid" id="achBooks"></div>
+    </div>
+    <div class="ach-section" style="margin-bottom:0;">
+      <h3>Skills Mastered</h3>
+      <div id="achSkills"></div>
+    </div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn-cancel" id="achCloseBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Storage compatibility shim: use Claude's injected window.storage when present
+// (i.e. running inside a Claude artifact preview), otherwise fall back to the
+// browser's own localStorage so this file works standalone once hosted anywhere.
+if(!window.storage){
+  window.storage = {
+    async get(key){
+      const val = localStorage.getItem(key);
+      return val !== null ? { key, value: val } : null;
+    },
+    async set(key, value){
+      localStorage.setItem(key, value);
+      return { key, value };
+    },
+    async delete(key){
+      localStorage.removeItem(key);
+      return { key, deleted: true };
+    },
+    async list(prefix){
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys };
+    }
+  };
+}
+
+const STORE_KEY = 'backlog-items';
+const LIMITS = { game: 1, skill: 3, book: 1 };
+const BACKLOG_CAP = { game: 5, skill: 8, book: 5 };
+const MILESTONES = [1,5,10,25,50,100];
+const TYPE_ICON = { game: '&#127918;', book: '&#128214;', skill: '&#129504;' };
+function handleImgError(imgEl, type){
+  const steamId = imgEl.dataset.steamId;
+  if(steamId && imgEl.dataset.triedHeader !== '1'){
+    imgEl.dataset.triedHeader = '1';
+    imgEl.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${steamId}/header.jpg`;
+    return;
+  }
+  imgEl.parentElement.innerHTML = `<span class="placeholder">${TYPE_ICON[type]}</span>`;
+}
+let pendingImageData;
+let items = [];
+let activeType = 'today';
+let activeStatus = 'all';
+let editingId = null;
+let currentRating = 0;
+let modalType = 'game';
+
+async function loadItems(){
+  try{
+    const res = await window.storage.get(STORE_KEY);
+    items = res ? JSON.parse(res.value) : [];
+  }catch(e){
+    items = [];
+  }
+  // Migration: the wishlist/cooldown status was removed — fold any old
+  // wishlist items straight into the backlog so nothing gets lost.
+  let migrated = false;
+  items.forEach(i => {
+    if(i.status === 'wishlist'){ i.status = 'backlog'; migrated = true; }
+  });
+  if(migrated) await saveItems();
+  render();
+}
+
+async function saveItems(){
+  try{
+    await window.storage.set(STORE_KEY, JSON.stringify(items));
+  }catch(e){
+    console.error('Storage error', e);
+  }
+}
+
+function uid(){ return 'i' + Date.now() + Math.random().toString(36).slice(2,7); }
+
+function statusLabel(s){
+  return s === 'backlog' ? 'Backlog' : s === 'active' ? 'Checked out' : s === 'done' ? 'Returned' : 'Discarded';
+}
+function labelFor(type){ return type==='game' ? 'Games' : type==='book' ? 'Books' : 'Skills'; }
+
+function activeCount(type, excludeId){
+  return items.filter(i => i.type===type && i.status==='active' && i.id!==excludeId).length;
+}
+function committedCount(type, excludeId){
+  return items.filter(i => i.type===type && (i.status==='backlog'||i.status==='active') && i.id!==excludeId).length;
+}
+function doneCount(type){
+  return items.filter(i=>i.type===type && i.status==='done').length;
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function daysSince(dateStr){
+  if(!dateStr) return Infinity;
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+}
+function render(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  const filtered = items.filter(it => it.type === activeType && (activeStatus==='all' || it.status===activeStatus));
+
+  document.getElementById('countGame').textContent = '('+items.filter(i=>i.type==='game').length+')';
+  document.getElementById('countSkill').textContent = '('+items.filter(i=>i.type==='skill').length+')';
+  document.getElementById('countBook').textContent = '('+items.filter(i=>i.type==='book').length+')';
+  const gDone = doneCount('game');
+  const sDone = doneCount('skill');
+  const bDone = doneCount('book');
+  document.getElementById('drawerCounts').innerHTML =
+    `${items.filter(i=>i.type==='game').length} games &middot; <b>${gDone}</b> cleared<br>${items.filter(i=>i.type==='skill').length} skills &middot; <b>${sDone}</b> mastered<br>${items.filter(i=>i.type==='book').length} books &middot; <b>${bDone}</b> finished`;
+
+  const limit = LIMITS[activeType];
+  const used = activeCount(activeType, null);
+  const cap = BACKLOG_CAP[activeType];
+  const committed = committedCount(activeType, null);
+  const banner = document.getElementById('limitBanner');
+  banner.className = 'limit-banner' + (used>=limit ? ' full' : '');
+  const typeWord = activeType==='game' ? 'game' : activeType==='book' ? 'book' : 'skill';
+  banner.innerHTML = `
+    <div>${used>=limit
+      ? `<b>${used}/${limit} active</b> &mdash; finish or discard a ${typeWord} before starting another.`
+      : `<b>${used}/${limit} active</b> &mdash; ${limit>1 ? `up to ${limit} ${typeWord}s in progress at once.` : `one ${typeWord} in progress at a time.`}`}</div>
+    <div class="cap-line ${committed>=cap?'full':''}"><b>${committed}/${cap}</b> committed (backlog + active) &mdash; ${committed>=cap ? 'full, finish or discard to add more.' : `room for ${cap-committed} more before it locks up.`}</div>
+  `;
+
+  if(filtered.length===0){
+    grid.innerHTML = `<div class="empty-state">Nothing filed here yet. Check something in with the button above.</div>`;
+    return;
+  }
+
+  filtered.forEach(it => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const stampClass = it.status === 'done' ? 'done' : it.status === 'discarded' ? 'discarded' : it.status === 'active' ? `active ${it.type}` : 'backlog';
+    const fillClass = it.status === 'done' ? 'done' : it.status === 'discarded' ? 'discarded' : it.type;
+    const stars = renderStarsStatic(it.rating||0);
+
+    let infoHtml = '';
+    const infoBits = [];
+    if(it.type==='game' && it.hours) infoBits.push(`<span><b>${it.hours}</b>h played</span>`);
+    if(it.type==='game' && it.achievements!=null && it.achievements!=='') infoBits.push(`<span><b>${it.achievements}%</b> achievements</span>`);
+    if(infoBits.length) infoHtml += `<div class="info-row">${infoBits.join('')}</div>`;
+
+    let streakHtml = '';
+    if(it.status === 'active'){
+      const c = it.checkins || {lastDate:null, streak:0};
+      const checkedToday = c.lastDate === todayStr();
+      const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+      let lastLabel = 'never';
+      if(c.lastDate === todayStr()) lastLabel = 'today';
+      else if(c.lastDate === yesterday) lastLabel = 'yesterday';
+      else if(c.lastDate) lastLabel = daysSince(c.lastDate)+'d ago';
+      const stale = c.lastDate && c.lastDate !== todayStr() && c.lastDate !== yesterday;
+      streakHtml = `<div class="streak-row">
+        <span class="flame">&#128293; ${c.streak||0}d streak</span>
+        <span class="${stale?'stale':''}">last: ${lastLabel}</span>
+        <button class="checkin-btn" data-checkin="${it.id}" ${checkedToday?'disabled':''}>${checkedToday?'&#10003; Checked in':'Check in today'}</button>
+      </div>`;
+    }
+
+    const coverSrc = it.imageUrl || it.imageData || null;
+    const steamMatch = coverSrc && coverSrc.match(/steamstatic\.com\/steam\/apps\/(\d+)\//);
+    const steamAttr = steamMatch ? `data-steam-id="${steamMatch[1]}"` : '';
+    const coverHtml = coverSrc
+      ? `<img src="${escapeHtml(coverSrc)}" alt="${escapeHtml(it.title)} cover" ${steamAttr} onerror="handleImgError(this,'${it.type}')">`
+      : `<span class="placeholder">${TYPE_ICON[it.type]}</span>`;
+
+    card.innerHTML = `
+      <div class="card-titlebar"><span class="dot"></span> ${it.type.toUpperCase()}</div>
+      <div class="card-cover">${coverHtml}</div>
+      <div class="stamp ${stampClass}">${statusLabel(it.status)}</div>
+      <div class="card-head">
+        <div class="card-title">${escapeHtml(it.title)}</div>
+        <div class="card-type">${it.type}</div>
+      </div>
+      <hr class="divider">
+      <div class="progress-row">
+        <div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${it.progress||0}%"></div></div>
+        <div class="progress-pct">${it.progress||0}%</div>
+      </div>
+      ${infoHtml}
+      ${streakHtml}
+      <div class="stars">${stars}</div>
+      <div class="notes">${escapeHtml(it.notes||'')}</div>
+      <div class="card-actions">
+        <button data-edit="${it.id}">Edit</button>
+      </div>
+    `;
+    card.querySelector('[data-edit]').addEventListener('click', ()=>openModal(it.id));
+    const checkinBtn = card.querySelector('[data-checkin]');
+    if(checkinBtn) checkinBtn.addEventListener('click', ()=>checkInItem(it.id));
+    grid.appendChild(card);
+  });
+}
+
+function renderStarsStatic(rating){
+  let out = '';
+  for(let i=1;i<=5;i++){
+    out += i<=rating ? '&#9733;' : '<span class="off">&#9733;</span>';
+  }
+  return out;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+const THEME = {
+  today: {
+    bg:'#9DA37E', panel:'#ACAF8E', panel2:'#D8D2B5',
+    text:'#2B2B23', textDim:'#5C5D48',
+    accent:'#B8562E', dim:'#8A4222', glow:'rgba(184,86,46,0.3)',
+    good:'#4A6B3E', bad:'#7A3B3B',
+    fontDisplay:"'Pixelify Sans', monospace", fontBody:"'Pixelify Sans', monospace",
+    radius:'4px'
+  },
+  game: {
+    bg:'#9DA37E', panel:'#ACAF8E', panel2:'#D8D2B5',
+    text:'#2B2B23', textDim:'#5C5D48',
+    accent:'#4F7091', dim:'#3A5570', glow:'rgba(79,112,145,0.3)',
+    good:'#4A6B3E', bad:'#7A3B3B',
+    fontDisplay:"'Pixelify Sans', monospace", fontBody:"'Pixelify Sans', monospace",
+    radius:'4px'
+  },
+  skill: {
+    bg:'#9DA37E', panel:'#ACAF8E', panel2:'#D8D2B5',
+    text:'#2B2B23', textDim:'#5C5D48',
+    accent:'#8A4B3B', dim:'#6B3A2D', glow:'rgba(138,75,59,0.3)',
+    good:'#4A6B3E', bad:'#7A3B3B',
+    fontDisplay:"'Pixelify Sans', monospace", fontBody:"'Pixelify Sans', monospace",
+    radius:'4px'
+  },
+  book: {
+    bg:'#9DA37E', panel:'#ACAF8E', panel2:'#D8D2B5',
+    text:'#2B2B23', textDim:'#5C5D48',
+    accent:'#4F6B4A', dim:'#3B5138', glow:'rgba(79,107,74,0.3)',
+    good:'#4A6B3E', bad:'#7A3B3B',
+    fontDisplay:"'Pixelify Sans', monospace", fontBody:"'Pixelify Sans', monospace",
+    radius:'4px'
+  }
+};
+function applyTheme(type){
+  const t = THEME[type] || THEME.game;
+  document.body.dataset.theme = type;
+  const root = document.documentElement.style;
+  root.setProperty('--bg', t.bg);
+  root.setProperty('--panel', t.panel);
+  root.setProperty('--panel-2', t.panel2);
+  root.setProperty('--text', t.text);
+  root.setProperty('--text-dim', t.textDim);
+  root.setProperty('--accent', t.accent);
+  root.setProperty('--accent-dim', t.dim);
+  root.setProperty('--accent-glow', t.glow);
+  root.setProperty('--good', t.good);
+  root.setProperty('--bad', t.bad);
+  root.setProperty('--font-display', t.fontDisplay);
+  root.setProperty('--font-body', t.fontBody);
+  root.setProperty('--card-radius', t.radius);
+}
+
+function updateViewVisibility(){
+  const isToday = activeType === 'today';
+  document.getElementById('todayPanel').style.display = isToday ? 'block' : 'none';
+  document.getElementById('catalogToolbar').style.display = isToday ? 'none' : 'block';
+  document.getElementById('limitBanner').style.display = isToday ? 'none' : 'block';
+}
+function renderCurrentView(){
+  updateViewVisibility();
+  if(activeType === 'today') renderToday();
+  else render();
+}
+
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active');
+    activeType = tab.dataset.type;
+    applyTheme(activeType);
+    renderCurrentView();
+  });
+});
+
+document.getElementById('filters').addEventListener('click', (e)=>{
+  if(e.target.classList.contains('filter-btn')){
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    activeStatus = e.target.dataset.status;
+    render();
+  }
+});
+
+const overlay = document.getElementById('overlay');
+const fProgress = document.getElementById('fProgress');
+const fProgressVal = document.getElementById('fProgressVal');
+fProgress.addEventListener('input', ()=> fProgressVal.textContent = fProgress.value+'%');
+
+function renderRatingPicker(){
+  const el = document.getElementById('fRating');
+  el.innerHTML='';
+  for(let i=1;i<=5;i++){
+    const s = document.createElement('span');
+    s.innerHTML = '&#9733;';
+    s.className = i<=currentRating ? '' : 'off';
+    s.addEventListener('click', ()=>{ currentRating = i; renderRatingPicker(); });
+    el.appendChild(s);
+  }
+}
+
+function handlePreviewError(imgEl){
+  const steamId = imgEl.dataset.steamId;
+  if(steamId && imgEl.dataset.triedHeader !== '1'){
+    imgEl.dataset.triedHeader = '1';
+    imgEl.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${steamId}/header.jpg`;
+    return;
+  }
+  imgEl.style.display = 'none';
+  const wrap = document.getElementById('imagePreviewWrap');
+  let note = document.getElementById('imagePreviewFail');
+  if(!note){
+    note = document.createElement('div');
+    note.id = 'imagePreviewFail';
+    note.style.cssText = "font-family:'IBM Plex Mono',monospace;font-size:0.68rem;color:var(--bad);margin-bottom:6px;";
+    wrap.insertBefore(note, imgEl);
+  }
+  note.textContent = "Couldn't load that image — check the ID/URL, or upload a file instead.";
+}
+
+function showImagePreview(src){
+  const img = document.getElementById('imagePreview');
+  const failNote = document.getElementById('imagePreviewFail');
+  if(failNote) failNote.remove();
+  img.style.display = 'block';
+  const steamMatch = src && src.match(/steamstatic\.com\/steam\/apps\/(\d+)\//);
+  if(steamMatch) img.dataset.steamId = steamMatch[1]; else delete img.dataset.steamId;
+  delete img.dataset.triedHeader;
+  img.src = src;
+  document.getElementById('imagePreviewWrap').style.display = 'block';
+}
+document.getElementById('fImageFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 320;
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      pendingImageData = canvas.toDataURL('image/jpeg', 0.82);
+      document.getElementById('fImageUrl').value = '';
+      showImagePreview(pendingImageData);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('removeImageBtn').addEventListener('click', ()=>{
+  pendingImageData = null;
+  document.getElementById('fImageUrl').value = '';
+  document.getElementById('fImageFile').value = '';
+  const failNote = document.getElementById('imagePreviewFail');
+  if(failNote) failNote.remove();
+  document.getElementById('imagePreview').style.display = 'block';
+  document.getElementById('imagePreviewWrap').style.display = 'none';
+});
+document.getElementById('fImageUrl').addEventListener('input', (e)=>{
+  const val = e.target.value.trim();
+  if(val){
+    pendingImageData = undefined;
+    document.getElementById('fImageFile').value = '';
+    showImagePreview(val);
+  }
+});
+
+document.getElementById('useSteamArt').addEventListener('click', ()=>{
+  const id = document.getElementById('fSteamId').value.trim();
+  if(!id) return;
+  const url = `https://cdn.cloudflare.steamstatic.com/steam/apps/${id}/library_600x900.jpg`;
+  document.getElementById('fImageUrl').value = url;
+  pendingImageData = undefined;
+  showImagePreview(url);
+});
+document.getElementById('useIsbnArt').addEventListener('click', ()=>{
+  const isbn = document.getElementById('fIsbn').value.trim().replace(/[^0-9Xx]/g,'');
+  if(!isbn) return;
+  const url = `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg`;
+  document.getElementById('fImageUrl').value = url;
+  pendingImageData = undefined;
+  showImagePreview(url);
+});
+
+function setModalType(t){
+  modalType = t;
+  applyTheme(t);
+  document.getElementById('typeGame').classList.toggle('sel', t==='game');
+  document.getElementById('typeSkill').classList.toggle('sel', t==='skill');
+  document.getElementById('typeBook').classList.toggle('sel', t==='book');
+  document.getElementById('steamFields').style.display = t==='game' ? 'block' : 'none';
+  document.getElementById('coverLookupGame').style.display = t==='game' ? 'flex' : 'none';
+  document.getElementById('coverLookupBook').style.display = t==='book' ? 'flex' : 'none';
+  checkStatusWarning();
+}
+document.getElementById('typeGame').addEventListener('click', ()=>setModalType('game'));
+document.getElementById('typeSkill').addEventListener('click', ()=>setModalType('skill'));
+document.getElementById('typeBook').addEventListener('click', ()=>setModalType('book'));
+document.getElementById('fStatus').addEventListener('change', checkStatusWarning);
+
+function checkStatusWarning(){
+  const warnBox = document.getElementById('warnBox');
+  const saveBtn = document.getElementById('saveBtn');
+  const status = document.getElementById('fStatus').value;
+  let msg = '';
+
+  if(status === 'backlog' || status === 'active'){
+    const cap = BACKLOG_CAP[modalType];
+    const committed = committedCount(modalType, editingId);
+    if(committed >= cap){
+      msg = `${labelFor(modalType)} backlog is full (${committed}/${cap} committed). Finish or discard something first.`;
+    }
+  }
+
+  if(!msg && status === 'active'){
+    const limit = LIMITS[modalType];
+    const used = activeCount(modalType, editingId);
+    if(used >= limit){
+      const blockers = items.filter(i=>i.type===modalType && i.status==='active' && i.id!==editingId).map(i=>i.title).join(', ');
+      msg = `${labelFor(modalType)} is full (${used}/${limit} active): ${blockers}. Mark one Done or Discarded first.`;
+    }
+  }
+
+  if(msg){ warnBox.textContent = msg; warnBox.classList.add('show'); saveBtn.disabled = true; }
+  else{ warnBox.classList.remove('show'); saveBtn.disabled = false; }
+}
+
+function openModal(id){
+  editingId = id || null;
+  const it = id ? items.find(i=>i.id===id) : null;
+  document.getElementById('modalTitle').textContent = it ? 'EDIT ENTRY' : 'NEW IMPULSE';
+  setModalType(it ? it.type : (activeType === 'today' ? 'game' : activeType));
+  document.getElementById('fTitle').value = it ? it.title : '';
+  pendingImageData = undefined;
+  document.getElementById('fImageFile').value = '';
+  document.getElementById('fImageUrl').value = it && it.imageUrl ? it.imageUrl : '';
+  document.getElementById('fSteamId').value = '';
+  document.getElementById('fIsbn').value = '';
+  const existingCover = it && (it.imageUrl || it.imageData);
+  if(existingCover) showImagePreview(existingCover);
+  else {
+    const failNote = document.getElementById('imagePreviewFail');
+    if(failNote) failNote.remove();
+    document.getElementById('imagePreview').style.display = 'block';
+    document.getElementById('imagePreviewWrap').style.display = 'none';
+  }
+  document.getElementById('fStatus').value = it ? it.status : 'backlog';
+  fProgress.value = it ? (it.progress||0) : 0;
+  fProgressVal.textContent = (it ? (it.progress||0) : 0) + '%';
+  document.getElementById('fHours').value = it && it.hours ? it.hours : '';
+  document.getElementById('fAch').value = it && it.achievements!=null ? it.achievements : '';
+  currentRating = it ? (it.rating||0) : 0;
+  renderRatingPicker();
+  document.getElementById('fNotes').value = it ? (it.notes||'') : '';
+  document.getElementById('deleteBtn').style.display = it ? 'inline-block' : 'none';
+  checkStatusWarning();
+  overlay.classList.add('open');
+}
+
+function closeModal(){
+  overlay.classList.remove('open');
+  editingId = null;
+  applyTheme(activeType);
+}
+
+document.getElementById('addBtn').addEventListener('click', ()=>openModal(null));
+document.getElementById('cancelBtn').addEventListener('click', closeModal);
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeModal(); });
+
+let toastTimer = null;
+function showToast(label){
+  const toast = document.getElementById('toast');
+  document.getElementById('toastLabel').textContent = label;
+  toast.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ toast.style.display = 'none'; }, 3200);
+}
+
+function playCompletionEffect(type){
+  if(type === 'game') playGameExplosion();
+  else if(type === 'book') playBookEffect();
+  else if(type === 'skill') playSkillEffect();
+}
+
+function playGameExplosion(){
+  const layer = document.getElementById('fxLayer');
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  const colors = ['#4F7091', '#D8D2B5', '#3A5570', '#B8862E'];
+  for(let i = 0; i < 30; i++){
+    const size = 6 + Math.random() * 10;
+    const p = document.createElement('div');
+    p.style.cssText = `position:absolute;left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${colors[i % colors.length]};`;
+    layer.appendChild(p);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 110 + Math.random() * 240;
+    const dx = Math.cos(angle) * dist, dy = Math.sin(angle) * dist;
+    const anim = p.animate([
+      { transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+      { transform: `translate(${dx - size/2}px, ${dy - size/2}px) scale(0)`, opacity: 0 }
+    ], { duration: 650 + Math.random() * 400, easing: 'cubic-bezier(.2,.7,.3,1)' });
+    anim.onfinish = () => p.remove();
+  }
+  const flash = document.createElement('div');
+  flash.style.cssText = 'position:fixed;inset:0;background:#4F7091;';
+  layer.appendChild(flash);
+  const fAnim = flash.animate([{ opacity: 0.25 }, { opacity: 0 }], { duration: 300, easing: 'ease-out' });
+  fAnim.onfinish = () => flash.remove();
+}
+
+function playBookEffect(){
+  const layer = document.getElementById('fxLayer');
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  for(let i = 0; i < 16; i++){
+    const w = 14 + Math.random() * 16, h = w * 1.3;
+    const p = document.createElement('div');
+    p.style.cssText = `position:absolute;left:${cx}px;top:${cy}px;width:${w}px;height:${h}px;background:#EFE6D3;border:1px solid #8A5218;box-shadow:1px 1px 3px rgba(0,0,0,0.3);`;
+    layer.appendChild(p);
+    const dx = (Math.random() - 0.5) * 460;
+    const dy = -(180 + Math.random() * 280);
+    const rot = (Math.random() - 0.5) * 640;
+    const anim = p.animate([
+      { transform: 'translate(-50%,-50%) rotate(0deg)', opacity: 1 },
+      { transform: `translate(${dx - w/2}px, ${dy - h/2}px) rotate(${rot}deg)`, opacity: 0 }
+    ], { duration: 950 + Math.random() * 500, easing: 'cubic-bezier(.15,.6,.25,1)' });
+    anim.onfinish = () => p.remove();
+  }
+}
+
+function playSkillEffect(){
+  const layer = document.getElementById('fxLayer');
+  const arm = document.createElement('div');
+  arm.textContent = '\u{1F4AA}';
+  arm.style.cssText = 'position:fixed;left:50%;top:50%;font-size:84px;transform:translate(-50%,-50%);filter:drop-shadow(0 0 14px rgba(255,226,138,0.6));';
+  layer.appendChild(arm);
+  const anim = arm.animate([
+    { transform: 'translate(-50%,-50%) scale(0.3) rotate(-10deg)', opacity: 0 },
+    { transform: 'translate(-50%,-50%) scale(1.3) rotate(6deg)', opacity: 1, offset: 0.3 },
+    { transform: 'translate(-50%,-50%) scale(0.92) rotate(-3deg)', opacity: 1, offset: 0.5 },
+    { transform: 'translate(-50%,-50%) scale(1.18) rotate(3deg)', opacity: 1, offset: 0.7 },
+    { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 0, offset: 1 }
+  ], { duration: 1400, easing: 'ease-out' });
+  anim.onfinish = () => arm.remove();
+
+  for(let i = 0; i < 10; i++){
+    const s = document.createElement('div');
+    s.textContent = '\u2726';
+    s.style.cssText = 'position:fixed;left:50%;top:50%;font-size:16px;color:#FFE28A;transform:translate(-50%,-50%);';
+    layer.appendChild(s);
+    const angle = Math.random() * Math.PI * 2;
+    const dist = 60 + Math.random() * 100;
+    const sAnim = s.animate([
+      { transform: 'translate(-50%,-50%) scale(0)', opacity: 1 },
+      { transform: `translate(${Math.cos(angle)*dist - 8}px, ${Math.sin(angle)*dist - 8}px) scale(1)`, opacity: 0 }
+    ], { duration: 850 + Math.random() * 300, easing: 'ease-out' });
+    sAnim.onfinish = () => s.remove();
+  }
+}
+
+function milestoneLabel(type, n){
+  const word = type==='game' ? (n===1?'GAME CLEARED':'GAMES CLEARED') : (n===1?'BOOK FINISHED':'BOOKS FINISHED');
+  return `${n} ${word}`;
+}
+
+document.getElementById('saveBtn').addEventListener('click', async ()=>{
+  const title = document.getElementById('fTitle').value.trim();
+  if(!title){ document.getElementById('fTitle').focus(); return; }
+  const existing = editingId ? items.find(i=>i.id===editingId) : null;
+  const status = document.getElementById('fStatus').value;
+
+  if(status==='backlog' || status==='active'){
+    const cap = BACKLOG_CAP[modalType];
+    if(committedCount(modalType, editingId) >= cap) return;
+  }
+  if(status==='active'){
+    const limit = LIMITS[modalType];
+    if(activeCount(modalType, editingId) >= limit) return;
+  }
+
+  const prevGameDone = doneCount('game');
+  const prevBookDone = doneCount('book');
+  const wasDoneBefore = existing ? existing.status === 'done' : false;
+  const urlVal = document.getElementById('fImageUrl').value.trim();
+  const imageData = pendingImageData === null ? null
+    : pendingImageData ? pendingImageData
+    : (existing ? existing.imageData : null);
+
+  const data = {
+    id: editingId || uid(),
+    type: modalType,
+    title,
+    status,
+    progress: parseInt(fProgress.value,10),
+    rating: currentRating,
+    notes: document.getElementById('fNotes').value.trim(),
+    hours: modalType==='game' ? (document.getElementById('fHours').value || null) : null,
+    achievements: modalType==='game' ? (document.getElementById('fAch').value !== '' ? document.getElementById('fAch').value : null) : null,
+    imageUrl: urlVal || null,
+    imageData: urlVal ? null : imageData,
+    checkins: existing ? (existing.checkins || {lastDate:null, streak:0}) : {lastDate:null, streak:0}
+  };
+  if(editingId){
+    const idx = items.findIndex(i=>i.id===editingId);
+    items[idx] = data;
+  } else {
+    items.push(data);
+  }
+  await saveItems();
+
+  if(modalType==='game'){
+    const newDone = doneCount('game');
+    const crossed = MILESTONES.filter(m => prevGameDone < m && newDone >= m);
+    if(crossed.length) showToast(milestoneLabel('game', crossed[crossed.length-1]));
+  } else if(modalType==='book'){
+    const newDone = doneCount('book');
+    const crossed = MILESTONES.filter(m => prevBookDone < m && newDone >= m);
+    if(crossed.length) showToast(milestoneLabel('book', crossed[crossed.length-1]));
+  } else if(modalType==='skill' && status==='done' && !wasDoneBefore){
+    showToast(`MASTERED: ${title.toUpperCase()}`);
+  }
+
+  activeType = modalType;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active', t.dataset.type===modalType));
+  // Jump the status filter to match what was just saved, so a status change
+  // (e.g. marking something Done) is immediately visible instead of the
+  // item just vanishing from whatever filter you happened to be on.
+  if(activeStatus !== 'all' && activeStatus !== status){
+    activeStatus = status;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.status===status));
+  }
+  render();
+  closeModal();
+  if(status === 'done' && !wasDoneBefore){
+    playCompletionEffect(modalType);
+  }
+});
+
+document.getElementById('deleteBtn').addEventListener('click', async ()=>{
+  if(!editingId) return;
+  items = items.filter(i=>i.id!==editingId);
+  await saveItems();
+  render();
+  closeModal();
+});
+
+async function checkInItem(id){
+  const it = items.find(i=>i.id===id);
+  if(!it) return;
+  const today = todayStr();
+  if(!it.checkins) it.checkins = {lastDate:null, streak:0};
+  if(it.checkins.lastDate === today) return;
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  it.checkins.streak = (it.checkins.lastDate === yesterday) ? (it.checkins.streak||0)+1 : 1;
+  it.checkins.lastDate = today;
+  await saveItems();
+  render();
+  showToast(`${it.checkins.streak} DAY STREAK: ${it.title.toUpperCase()}`);
+}
+
+const achOverlay = document.getElementById('achOverlay');
+
+const TROPHY_GRID = [
+  "...OOOOOOOOOOOOOO...",
+  "...OBBHHBBBBHHBBO...",
+  ".OOOSSSSSSSSSSSSOOO.",
+  "OBOOOBHHBBBBHHBOOOBO",
+  "OBO.OBHHBBBBHHBO.OBO",
+  "OBO.OBHHBBBBHHBO.OBO",
+  ".OBOOBBHBBBBHBBOOBO.",
+  "..OBOSBHBBBBHBSOBO..",
+  "...OBOBBHBBHBBOBO...",
+  "....OOSBBBBBBSOO....",
+  ".......SSSSSS.......",
+  "........OBBO........",
+  "........OHHO........",
+  "........OHHO........",
+  ".......OBHHBO.......",
+  ".....OBHBBBBHBO.....",
+  ".....OOOOOOOOOO....."
+];
+const GEM_GRID = [
+  "...O...",
+  "..OHO..",
+  ".OBBBO.",
+  "OBBBBBO",
+  ".OBBBO.",
+  "..OBO..",
+  "...O..."
+];
+const TROPHY_TIERS = [
+  { threshold: 1,   B: '#B8562E', H: '#E89A6B', S: '#7A361A' }, // bronze
+  { threshold: 5,   B: '#9AA3A0', H: '#D6DBD8', S: '#666E6B' }, // silver
+  { threshold: 10,  B: '#B8862E', H: '#F0CE72', S: '#8A6320' }, // gold
+  { threshold: 25,  B: '#4F7091', H: '#8FB4D6', S: '#344C66' }, // sapphire
+  { threshold: 50,  B: '#4A6B3E', H: '#8FC97E', S: '#2E4A26' }, // emerald
+  { threshold: 100, B: '#3A3A5C', H: '#E8C468', S: '#262640' }  // legendary
+];
+const GEM_PALETTE = { B: '#6B4A8A', H: '#B99AD6', S: '#4A3260' };
+
+function pixelIconSVG(grid, palette, locked, size){
+  const rows = grid.length, cols = grid[0].length;
+  let rects = '';
+  for(let r = 0; r < rows; r++){
+    for(let c = 0; c < cols; c++){
+      const ch = grid[r][c];
+      if(ch === '.') continue;
+      let fill;
+      if(locked){
+        fill = ch === 'O' ? 'rgba(43,43,35,0.5)' : 'rgba(43,43,35,0.18)';
+      } else {
+        fill = ch === 'O' ? '#2B2B23' : (palette[ch] || palette.B);
+      }
+      rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="${fill}"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 ${cols} ${rows}" width="${size}" height="${Math.round(size*rows/cols)}" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
+}
+
+function renderMilestoneGrid(containerId, type){
+  const container = document.getElementById(containerId);
+  const done = doneCount(type);
+  container.innerHTML = '';
+  MILESTONES.forEach((m, idx) => {
+    const unlocked = done >= m;
+    const tier = TROPHY_TIERS[idx] || TROPHY_TIERS[TROPHY_TIERS.length - 1];
+    const badge = document.createElement('div');
+    badge.className = `ach-badge ${type} ${unlocked ? '' : 'locked'}`;
+    badge.innerHTML = `
+      <div class="icon">${pixelIconSVG(TROPHY_GRID, tier, !unlocked, 68)}</div>
+      <div class="ach-rank">${'\u2605'.repeat(idx + 1)}</div>
+      <div class="label">${milestoneLabel(type, m)}</div>
+      <div class="sub">${unlocked ? 'UNLOCKED' : `${done}/${m}`}</div>
+    `;
+    container.appendChild(badge);
+  });
+}
+
+function renderSkillAchievements(){
+  const container = document.getElementById('achSkills');
+  const doneSkills = items.filter(i=>i.type==='skill' && i.status==='done');
+  if(doneSkills.length===0){
+    container.innerHTML = `<div class="ach-empty">No skills mastered yet</div>`;
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'ach-grid';
+  doneSkills.forEach(s=>{
+    const badge = document.createElement('div');
+    badge.className = 'ach-badge';
+    badge.innerHTML = `<div class="icon">${pixelIconSVG(GEM_GRID, GEM_PALETTE, false, 48)}</div><div class="label">${escapeHtml(s.title)}</div><div class="sub">MASTERED</div>`;
+    grid.appendChild(badge);
+  });
+  container.innerHTML = '';
+  container.appendChild(grid);
+}
+
+function openAchievements(){
+  renderMilestoneGrid('achGames', 'game');
+  renderMilestoneGrid('achBooks', 'book');
+  renderSkillAchievements();
+  achOverlay.classList.add('open');
+}
+document.getElementById('achBtn').addEventListener('click', openAchievements);
+document.getElementById('achCloseBtn').addEventListener('click', ()=>achOverlay.classList.remove('open'));
+achOverlay.addEventListener('click', (e)=>{ if(e.target===achOverlay) achOverlay.classList.remove('open'); });
+
+const TODO_KEY = 'daily-todos';
+let dailyTodos = { date: '', items: [] };
+
+const QUOTES = [
+  { text: "The successful warrior is the average man, with laser-like focus.", author: "Bruce Lee" },
+  { text: "It is not the daily increase but daily decrease. Hack away at the unessential.", author: "Bruce Lee" },
+  { text: "You do not rise to the level of your goals. You fall to the level of your systems.", author: "James Clear" },
+  { text: "Discipline is choosing between what you want now and what you want most.", author: "Abraham Lincoln" },
+  { text: "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.", author: "Stephen King" },
+  { text: "The chains of habit are too weak to be felt until they are too strong to be broken.", author: "Samuel Johnson" },
+  { text: "We are what we repeatedly do. Excellence, then, is not an act but a habit.", author: "Will Durant" },
+  { text: "Simplicity is the ultimate sophistication.", author: "Leonardo da Vinci" },
+  { text: "Focus is a matter of deciding what things you're not going to do.", author: "John Carmack" },
+  { text: "A goal without a plan is just a wish.", author: "Antoine de Saint-Exup\u00e9ry" },
+  { text: "You can do anything, but not everything.", author: "David Allen" },
+  { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "Well begun is half done.", author: "Aristotle" },
+  { text: "Do the hard jobs first. The easy jobs will take care of themselves.", author: "Dale Carnegie" },
+  { text: "Nothing is particularly hard if you divide it into small jobs.", author: "Henry Ford" },
+  { text: "Action is the foundational key to all success.", author: "Pablo Picasso" },
+  { text: "Small daily improvements are the key to staggering long-term results.", author: "James Clear" },
+  { text: "What we plant in the soil of contemplation, we shall reap in the harvest of action.", author: "Meister Eckhart" },
+  { text: "The man who moves a mountain begins by carrying away small stones.", author: "Confucius" },
+];
+
+function getDailyQuote(){
+  const dateStr = dailyTodos.date || todayStr();
+  let hash = 0;
+  for(let i = 0; i < dateStr.length; i++){
+    hash = (hash * 31 + dateStr.charCodeAt(i)) >>> 0;
+  }
+  return QUOTES[hash % QUOTES.length];
+}
+
+async function loadTodos(){
+  let stored = null;
+  try{
+    const res = await window.storage.get(TODO_KEY);
+    stored = res ? JSON.parse(res.value) : null;
+  }catch(e){
+    stored = null;
+  }
+  const today = todayStr();
+  if(stored && stored.date === today){
+    dailyTodos = stored;
+  } else {
+    // New day (or first run) — start fresh, per the "reset every day" design.
+    dailyTodos = { date: today, items: [] };
+    await saveTodos();
+  }
+}
+
+async function saveTodos(){
+  try{
+    await window.storage.set(TODO_KEY, JSON.stringify(dailyTodos));
+  }catch(e){
+    console.error('Storage error', e);
+  }
+}
+
+function renderToday(){
+  const quote = getDailyQuote();
+  document.getElementById('todayQuote').innerHTML = `
+    <div class="q-text">\u201c${escapeHtml(quote.text)}\u201d</div>
+    <div class="q-author">\u2014 ${escapeHtml(quote.author)}</div>
+  `;
+
+  const dateEl = document.getElementById('todayDate');
+  const dateObj = new Date(dailyTodos.date + 'T00:00:00');
+  dateEl.textContent = dateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+
+  const doneCt = dailyTodos.items.filter(t => t.done).length;
+  document.getElementById('todayCount').innerHTML = dailyTodos.items.length
+    ? `<b>${doneCt}</b>/${dailyTodos.items.length} done today`
+    : 'Nothing on the list yet';
+
+  const list = document.getElementById('todayList');
+  if(dailyTodos.items.length === 0){
+    list.innerHTML = `<div class="today-empty">Add what you\u2019re actually going to do today \u2014 it clears at midnight.</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  dailyTodos.items.forEach(t => {
+    const row = document.createElement('div');
+    row.className = 'today-item' + (t.done ? ' done' : '');
+    row.innerHTML = `
+      <div class="today-check" data-toggle="${t.id}">${t.done ? '\u2713' : ''}</div>
+      <div class="today-text">${escapeHtml(t.text)}</div>
+      <button class="today-del" data-del="${t.id}">\u2715</button>
+    `;
+    row.querySelector('[data-toggle]').addEventListener('click', () => toggleTodo(t.id));
+    row.querySelector('[data-del]').addEventListener('click', () => deleteTodo(t.id));
+    list.appendChild(row);
+  });
+}
+
+async function addTodo(){
+  const input = document.getElementById('todoInput');
+  const text = input.value.trim();
+  if(!text) return;
+  dailyTodos.items.push({ id: uid(), text, done: false });
+  input.value = '';
+  await saveTodos();
+  renderToday();
+}
+async function toggleTodo(id){
+  const t = dailyTodos.items.find(i => i.id === id);
+  if(!t) return;
+  t.done = !t.done;
+  await saveTodos();
+  renderToday();
+}
+async function deleteTodo(id){
+  dailyTodos.items = dailyTodos.items.filter(i => i.id !== id);
+  await saveTodos();
+  renderToday();
+}
+document.getElementById('todoAddBtn').addEventListener('click', addTodo);
+document.getElementById('todoInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter') addTodo();
+});
+
+applyTheme(activeType);
+updateViewVisibility();
+loadTodos().then(renderToday);
+loadItems();
+
+if('serviceWorker' in navigator && location.protocol !== 'blob:'){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* not fatal, e.g. running from a plain file:// */ });
+  });
+}
+</script>
+</body>
+</html>
